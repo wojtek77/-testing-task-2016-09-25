@@ -44,6 +44,10 @@ use Cake\Routing\Route\DashedRoute;
 Router::defaultRouteClass(DashedRoute::class);
 
 Router::prefix('admin', function ($routes) {
+
+    // default route for "/admin"
+    $routes->connect('/', ['controller' => 'Games', 'action' => 'index']);
+
     // All routes here will be prefixed with `/admin`
     // And have the prefix => admin route element added.
     $routes->fallbacks(DashedRoute::class);
