@@ -5,6 +5,9 @@ use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use Cake\Event\Event;
+use Cake\Datasource\EntityInterface;
+use ArrayObject;
 
 /**
  * Games Model
@@ -94,5 +97,36 @@ class GamesTable extends Table
         $rules->add($rules->existsIn(['publisher_id'], 'Publishers'));
 
         return $rules;
+    }
+
+    public function afterSave(Event $event, EntityInterface $entity, ArrayObject $options)
+    {
+        if ($entity->isNew()) { // insert
+
+            /* subskrypcja - wysłanie informacji o nowo dodanej grze */
+            $speciesId = $entity->species_id;
+            $species = $this->Species->find()->where(['id' => $speciesId])->first();
+            $subscriptionsTable = \Cake\ORM\TableRegistry::get('Subscriptions');
+            $subscriptionsQuery = $subscriptionsTable->find()->where(['species_id' => $speciesId]);
+            $emails = [];
+            foreach ($subscriptionsQuery as $subscription) {
+                $emails[] = $subscription->email;
+            }
+            if ($emails) {
+                mail(
+                    implode(',', $emails),
+                    'Informacja o dodaniu nowej gry',
+                    "Na portalu '{$_SERVER['HTTP_HOST']}' dodana została nowa gra z gatunku '{$species->name}' o tytule '{$entity->name}'"
+                );
+            }
+
+        } else { // update
+
+            /* wysłanie emaila do administratora o sprzedaniu ostatniej gry */
+            if ($entity->quantity < 1) {
+                // TODO utworzyć email do administratora w systemie
+                //mail('admin@localhost', "Sprzedany został ostatni egzemplarz gry {$entity->name}", "Sprzedany został ostatni egzemplarz gry {$entity->name}");
+            }
+        }
     }
 }
